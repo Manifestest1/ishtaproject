@@ -1,6 +1,6 @@
 'use strict';
 const { Model } = require('sequelize');
-module.exports = (sequelize, DataTypes) => {
+module.exports = (sequelize, DataTypes) => { 
   class User extends Model {
     static associate(models) {
       // define association here 
@@ -23,6 +23,17 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: false,
     },
+    isActive: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
+    deletedAt: {
+      type: DataTypes.DATE,
+      allowNull: true, // Allow NULL for active users
+      defaultValue: null
+    },
+    
   }, {
     sequelize,
     modelName: 'User',

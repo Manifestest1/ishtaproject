@@ -13,7 +13,7 @@ let blacklist = [];
 
 app.use(bodyParser.json());
 app.use(cors());
-
+const upload = require('./multer'); // Multer middleware
 app.get('/', (req, res) =>{
     res.send("Hello World");
 });
@@ -90,6 +90,30 @@ app.post('/api/login', async (req, res) => {
     }
   });
 
+  app.post('/api/fasescape_image_upload', upload.single('file'), (req, res) => {
+    try 
+    {
+      const file = req.file;
+      if (!file) 
+      {
+        return res.status(400).send({ message: 'Please upload a file.' });
+      }
+
+      const imagePath = file.path;
+      // await User.query().findById(userId).patch({ image: imagePath });
+  
+      return res.status(200).send({ message: 'File uploaded and user updated successfully.', imagePath });
+
+      // Handle file upload success (e.g., save file path or other metadata in database)
+
+    } 
+    catch (err) 
+    {
+      console.error('Error uploading file:', err);
+      return res.status(500).send({ message: 'Internal server error.' });
+    }
+  });
+
 //   Start Admin Api
 
   app.post('/api/admin_login', async (req, res) => {
@@ -119,13 +143,79 @@ app.post('/api/login', async (req, res) => {
 app.get('/api/admin_user', authMiddleware, async (req, res) => {
     try 
     {
-      const user = await Admin.findByPk(req.userId);
+      const user = await Admin.findByPk(req.userId); 
       res.json({ user });
     } 
     catch (error) 
     {
       res.status(500).json({ error: 'Failed to fetch profile' });
     }
+});
+
+app.get('/api/get_all_users', authMiddleware, async (req, res) => {
+  try 
+  {
+    // const users = await User.findAll();
+    const users = await User.findAll({
+      where: {
+        deletedAt: null // Filter out soft-deleted users
+      }
+    });
+    res.json(users);
+  } 
+  catch (error) 
+  {
+    res.status(500).json({ error: 'Failed to fetch users' });
+  }
+});
+
+app.post('/api/user_status_update', async (req, res) => {
+  console.log(req,"FRom user update")
+  const { userId, newStatus } = req.body;
+
+  try 
+  {
+    // Update user's isActive status
+    const updatedUser = await User.update({ isActive: newStatus }, {
+      where: { id: userId }
+    });
+
+    if (updatedUser[0] === 1) 
+    {
+      res.json({ message: 'User status updated successfully' ,update_user: updatedUser[0]});
+    } 
+    else 
+    {
+      res.status(404).json({ error: 'User not found or status not updated', update_user: 0 });
+    }
+  } 
+  catch (error) 
+  {
+    console.error('Error updating user status:', error);
+    res.status(500).json({ error: 'Failed to update user status' });
+  }
+
+});
+
+// Soft delete a user
+app.put('/api/user/:id/delete', async (req, res) => {
+  const userId = req.params.id;
+  try 
+  {
+    const user = await User.findByPk(userId);
+    if (!user) 
+    {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    // Soft delete user by setting deletedAt timestamp
+    await user.update({ deletedAt: new Date() });
+    res.json({ message: `User ${userId} soft-deleted successfully` });
+  } 
+  catch (error) 
+  {
+    console.error(`Error soft-deleting user ${userId}:`, error);
+    res.status(500).json({ error: `Failed to soft-delete user ${userId}` });
+  }
 });
 
   //   End Admin Api

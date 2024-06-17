@@ -2,7 +2,7 @@
   "development": {
     "username": "root",
     "password": null,
-    "database": "facescape_db_backend", 
+    "database": "facescape_db_backend",  
     "host": "127.0.0.1",
     "dialect": "mysql"
   },
