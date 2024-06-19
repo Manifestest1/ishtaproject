@@ -10,10 +10,10 @@ const storage = multer.diskStorage({
   {
     // Extract file extension
     const extArray = file.originalname.split('.');
-    const extension = extArray[extArray.length - 1];
+    const extension = extArray[extArray.length - 1]; 
 
     // Set custom filename
-    cb(null, 'fase_scape_' + Date.now() + '.' + extension);
+    cb(null, 'filter_images_' + Date.now() + '.' + extension);
   }
 });
 

@@ -7,20 +7,29 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { User } = require('./models');
 const { Admin } = require('./models');
+const { FilterCategory } = require('./models');
+const { Filter } = require('./models');
 
-const SECRET_KEY = 'your_jwt_secret_key';
+const SECRET_KEY = 'your_jwt_secret_key'; 
 let blacklist = [];
 
 app.use(bodyParser.json());
 app.use(cors());
 const upload = require('./multer'); // Multer middleware
+const path = require('path');
+
+// Define the directory for static files (uploads folder)
+const uploadsDirectory = path.join(__dirname, 'uploads');
+// Middleware to serve static files
+app.use('/uploads', express.static(uploadsDirectory));
+
+
 app.get('/', (req, res) =>{
     res.send("Hello World");
 });
 
 app.post('/api/register', async (req, res) => {
     const { name, email, password } = req.body;
-    // console.log(req.body);
     try 
     {
       const hashedPassword = await bcrypt.hash(password, 10);
@@ -114,6 +123,39 @@ app.post('/api/login', async (req, res) => {
     }
   });
 
+  app.get('/api/get_filters_data', async (req, res) => {
+    try {
+      const filters = await Filter.findAll({
+        include: {
+          model: FilterCategory,
+          attributes: ['id', 'name'] // Specify attributes you want to include from FilterCategory
+        }
+      });
+  
+      // Group filters by category_id
+      const groupedFilters = filters.reduce((acc, filter) => {
+        const categoryId = filter.category_id;
+        if (!acc[categoryId]) 
+        {
+          acc[categoryId] = {
+            category_id: categoryId,
+            category_name: filter.FilterCategory.name,
+            sub_categories: []
+          };
+        }
+        acc[categoryId].sub_categories.push({id: filter.id,sub_category:filter.sub_category});
+        return acc;
+      }, {});
+  
+      // Convert the grouped object into an array
+      const groupedFiltersArray = Object.values(groupedFilters);
+  
+      return res.status(200).send({ message: 'Filter Data.', filters: groupedFiltersArray });
+    } catch (error) {
+      return res.status(500).send({ message: 'Error fetching filter data.', error });
+    }
+  });
+
 //   Start Admin Api
 
   app.post('/api/admin_login', async (req, res) => {
@@ -176,7 +218,7 @@ app.post('/api/user_status_update', async (req, res) => {
   try 
   {
     // Update user's isActive status
-    const updatedUser = await User.update({ isActive: newStatus }, {
+    const updatedUser = await User.update({ is_active: newStatus }, {
       where: { id: userId }
     });
 
@@ -195,6 +237,49 @@ app.post('/api/user_status_update', async (req, res) => {
     res.status(500).json({ error: 'Failed to update user status' });
   }
 
+});
+
+app.post('/api/add_filters_category', async (req, res) => {
+  const { name, order_no } = req.body;
+  try 
+  {
+    const add_filters_category = await FilterCategory.create({ name, order_no });
+    res.json({ message: 'User status updated successfully' ,add_filters_category: add_filters_category});
+    
+  } 
+  catch (error) 
+  {
+    res.status(500).json({ error: 'Login failed' });
+  }
+});
+
+app.get('/api/get_filters_category', authMiddleware, async (req, res) => { 
+  try 
+  {
+    const categories = await FilterCategory.findAll();
+    res.json(categories);
+  } 
+  catch (error) 
+  {
+    res.status(500).json({ error: 'Failed to fetch users' });
+  }
+});
+
+app.post('/api/add_filters_data', upload.single('image'), async (req, res) => {
+  const { category_id, sub_category } = req.body;
+  const file = req.file;
+  const image = file.path;
+  console.log(req,"Filter Api");
+  try 
+  {
+    const add_filters_data = await Filter.create({ category_id, sub_category,image });
+    res.json({ message: 'User status updated successfully' ,add_filters_data: add_filters_data});
+    
+  } 
+  catch (error) 
+  {
+    res.status(500).json({ error: 'Login failed' });
+  }
 });
 
 // Soft delete a user
