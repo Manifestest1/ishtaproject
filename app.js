@@ -128,7 +128,7 @@ app.post('/api/login', async (req, res) => {
       const filters = await Filter.findAll({
         include: {
           model: FilterCategory,
-          attributes: ['id', 'name'] // Specify attributes you want to include from FilterCategory
+          attributes: ['id', 'name','order_no'] // Specify attributes you want to include from FilterCategory
         }
       });
   
@@ -140,10 +140,11 @@ app.post('/api/login', async (req, res) => {
           acc[categoryId] = {
             category_id: categoryId,
             category_name: filter.FilterCategory.name,
+            order_no: filter.FilterCategory.order_no,
             sub_categories: []
           };
         }
-        acc[categoryId].sub_categories.push({id: filter.id,sub_category:filter.sub_category});
+        acc[categoryId].sub_categories.push({id: filter.id,image: filter.image,sub_category:filter.sub_category});
         return acc;
       }, {});
   
@@ -253,7 +254,7 @@ app.post('/api/add_filters_category', async (req, res) => {
   }
 });
 
-app.get('/api/get_filters_category', authMiddleware, async (req, res) => { 
+app.get('/api/get_filters_category', async (req, res) => { 
   try 
   {
     const categories = await FilterCategory.findAll();
@@ -273,7 +274,7 @@ app.post('/api/add_filters_data', upload.single('image'), async (req, res) => {
   try 
   {
     const add_filters_data = await Filter.create({ category_id, sub_category,image });
-    res.json({ message: 'User status updated successfully' ,add_filters_data: add_filters_data});
+    return res.status(200).send({ message: 'Filter Data.', filters: add_filters_data });
     
   } 
   catch (error) 
