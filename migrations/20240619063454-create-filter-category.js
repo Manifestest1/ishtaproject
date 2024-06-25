@@ -13,7 +13,7 @@ module.exports = {
         type: Sequelize.STRING
       },
       order_no: {
-        type: DataTypes.INTEGER,
+        type: Sequelize.INTEGER,
         allowNull: false
       },
       createdAt: {

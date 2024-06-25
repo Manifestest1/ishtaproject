@@ -132,39 +132,58 @@ app.post('/api/login', async (req, res) => {
     }
   });
 
-  app.get('/api/get_filters_data', async (req, res) => {
-    try {
-      const filters = await Filter.findAll({
-        include: {
-          model: FilterCategory,
-          attributes: ['id', 'name','order_no'] // Specify attributes you want to include from FilterCategory
-        }
+ // Express route to fetch filtered data
+app.get('/api/get_filters_data', async (req, res) => {
+  try {
+    // Fetch all data from the FilterCategory model
+    const allFilterCategories = await FilterCategory.findAll();
+  
+    // Fetch matched data from the Filter model with the corresponding FilterCategory
+    const filters = await Filter.findAll({
+      attributes: ['id', 'image', 'sub_category', 'category_id'], // Include all necessary attributes of Filter
+      include: {
+        model: FilterCategory,
+        attributes: ['id', 'name', 'order_no'] // Include specific attributes of FilterCategory
+      }
+    });
+  
+    // Format the response by grouping filters by category_id
+    const groupedFilters = filters.reduce((acc, filter) => {
+      const categoryId = filter.category_id;
+      if (!acc[categoryId]) {
+        acc[categoryId] = {
+          category_id: categoryId,
+          category_name: filter.FilterCategory.name,
+          order_no: filter.FilterCategory.order_no,
+          sub_categories: []
+        };
+      }
+      acc[categoryId].sub_categories.push({
+        id: filter.id,
+        image: filter.image,
+        sub_category: filter.sub_category
       });
+      return acc;
+    }, {});
   
-      // Group filters by category_id
-      const groupedFilters = filters.reduce((acc, filter) => {
-        const categoryId = filter.category_id;
-        if (!acc[categoryId]) 
-        {
-          acc[categoryId] = {
-            category_id: categoryId,
-            category_name: filter.FilterCategory.name,
-            order_no: filter.FilterCategory.order_no,
-            sub_categories: []
-          };
-        }
-        acc[categoryId].sub_categories.push({id: filter.id,image: filter.image,sub_category:filter.sub_category});
-        return acc;
-      }, {});
+    // Convert the grouped object into an array
+    const groupedFiltersArray = Object.values(groupedFilters);
   
-      // Convert the grouped object into an array
-      const groupedFiltersArray = Object.values(groupedFilters);
+    // Merge the data from FilterCategory and grouped filters
+    const result = allFilterCategories.map(category => {
+      return {
+        ...category.dataValues,
+        sub_categories: groupedFilters[category.id] ? groupedFilters[category.id].sub_categories : []
+      };
+    });
   
-      return res.status(200).send({ message: 'Filter Data.', filters: groupedFiltersArray });
-    } catch (error) {
-      return res.status(500).send({ message: 'Error fetching filter data.', error });
-    }
-  });
+    return res.status(200).send({ message: 'Filter Data.', filters: result });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).send({ message: 'Error fetching filter data.', error });
+  }
+  
+});
 
 //   Start Admin Api
 
@@ -254,7 +273,8 @@ app.post('/api/add_filters_category', async (req, res) => {
   try 
   {
     const add_filters_category = await FilterCategory.create({ name, order_no });
-    res.json({ message: 'User status updated successfully' ,add_filters_category: add_filters_category});
+    return res.status(200).send({ message: 'Filter Data.', add_filters_category: add_filters_category });
+    //res.json({ message: 'User status updated successfully' ,add_filters_category: add_filters_category});
     
   } 
   catch (error) 
