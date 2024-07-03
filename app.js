@@ -7,8 +7,9 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { User } = require('./models');
 const { Admin } = require('./models');
-const { FilterCategory } = require('./models');
+const { FilterCategory } = require('./models'); 
 const { Filter } = require('./models');
+const { Image } = require('./models');
 
 const SECRET_KEY = 'your_jwt_secret_key'; 
 let blacklist = [];
@@ -16,6 +17,8 @@ let blacklist = [];
 app.use(bodyParser.json());
 app.use(cors());
 const upload = require('./multer'); // Multer middleware
+const uploadImages = require('./multer_images/images')
+
 const path = require('path');
 
 // Define the directory for static files (uploads folder)
@@ -132,6 +135,23 @@ app.post('/api/login', async (req, res) => {
     }
   });
 
+  app.post('/api/add_upload_images',authMiddleware, uploadImages.single('image'), async (req, res) => {
+    const user_id = req.userId;
+    const file = req.file;
+    const image = file.path;
+    console.log(req,"Filter Api");
+    try 
+    {
+      const add_images_data = await Image.create({ user_id,image });
+      return res.status(200).send({ message: 'Filter Data.', images: add_images_data });
+      
+    } 
+    catch (error) 
+    {
+      res.status(500).json({ error: 'image not upload' });
+    }
+  });
+
  // Express route to fetch filtered data
 app.get('/api/get_filters_data', async (req, res) => {
   try {
@@ -184,6 +204,8 @@ app.get('/api/get_filters_data', async (req, res) => {
   }
   
 });
+
+
 
 //   Start Admin Api
 
