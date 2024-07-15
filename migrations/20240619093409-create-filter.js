@@ -10,13 +10,17 @@ module.exports = {
         type: Sequelize.INTEGER
       },
       category_id: {
-        type: Sequelize.INTEGER
+        type: Sequelize.INTEGER 
       },
       image: {
         type: Sequelize.STRING
       },
       sub_category: {
         type: Sequelize.STRING
+      },
+      deletedAt: {
+        allowNull: true,
+        type: Sequelize.DATE
       },
       createdAt: {
         allowNull: false,
