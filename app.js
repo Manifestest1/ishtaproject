@@ -156,14 +156,21 @@ app.post('/api/login', async (req, res) => {
 app.get('/api/get_filters_data', async (req, res) => {
   try {
     // Fetch all data from the FilterCategory model
-    const allFilterCategories = await FilterCategory.findAll();
+    const allFilterCategories = await FilterCategory.findAll({
+      where: {
+        deletedAt: null // Filter out soft-deleted users
+      }
+    });
   
     // Fetch matched data from the Filter model with the corresponding FilterCategory
     const filters = await Filter.findAll({
-      attributes: ['id', 'image', 'sub_category', 'category_id'], // Include all necessary attributes of Filter
+      attributes: ['id', 'image', 'sub_category','api_key', 'category_id'], // Include all necessary attributes of Filter
       include: {
         model: FilterCategory,
         attributes: ['id', 'name', 'order_no'] // Include specific attributes of FilterCategory
+      },
+      where: {
+        deletedAt: null // Filter out soft-deleted users
       }
     });
   
@@ -181,7 +188,8 @@ app.get('/api/get_filters_data', async (req, res) => {
       acc[categoryId].sub_categories.push({
         id: filter.id,
         image: filter.image,
-        sub_category: filter.sub_category
+        sub_category: filter.sub_category,
+        api_key: filter.api_key
       });
       return acc;
     }, {});
@@ -203,6 +211,88 @@ app.get('/api/get_filters_data', async (req, res) => {
     return res.status(500).send({ message: 'Error fetching filter data.', error });
   }
   
+});
+
+// Soft delete a Filter
+app.put('/api/filter/:id/delete', async (req, res) => {
+  const filterId = req.params.id;
+  try 
+  {
+    const filter = await Filter.findByPk(filterId);
+    if (!filter) 
+    {
+      return res.status(404).json({ error: 'Filter not found' });
+    }
+    // Soft delete user by setting deletedAt timestamp
+    await filter.update({ deletedAt: new Date() });
+    res.json({ message: `Filter ${filterId} soft-deleted successfully` });
+  } 
+  catch (error) 
+  {
+    console.error(`Error soft-deleting user ${userId}:`, error);
+    res.status(500).json({ error: `Failed to soft-delete user ${userId}` });
+  }
+});
+
+// Edit a Filter Category
+app.put('/api/filter-category/:id/edit', async (req, res) => {
+  const filtercatId = req.params.id;
+  try 
+  {
+    const filter_cat = await FilterCategory.findByPk(filtercatId);
+    if (!filter_cat) 
+    {
+      return res.status(404).json({ error: 'Filter Category not found' }); 
+    }
+    res.json({ message: `Edit Data get successfully`,filter_cat_data:  filter_cat});
+  } 
+  catch (error) 
+  {
+    console.error(`Error soft-deleting user ${userId}:`, error);
+    res.status(500).json({ error: `Failed to soft-delete user ${userId}` });
+  }
+});
+
+app.post('/api/filter_category_update', async (req, res) => {
+  console.log(req,"FRom user update")
+  const {name,order_no,cat_id } = req.body;
+
+  try 
+  {
+    // Update user's isActive status
+    const updatedFilterCat = await FilterCategory.update({ name: name,order_no: order_no }, {
+      where: { id: cat_id }
+    });
+    res.json({ message: 'Filter Category updated successfully' ,update_filter_cat: updatedFilterCat[0]});
+  
+  } 
+  catch (error) 
+  {
+    console.error('Error updating user status:', error);
+    res.status(500).json({ error: 'Failed to update user status' });
+  }
+
+});
+
+// Soft delete a Filter Category
+app.put('/api/filter-category/:id/delete', async (req, res) => {
+  const filtercatId = req.params.id;
+  try 
+  {
+    const filter_cat = await FilterCategory.findByPk(filtercatId);
+    if (!filter_cat) 
+    {
+      return res.status(404).json({ error: 'Filter Category not found' }); 
+    }
+    // Soft delete user by setting deletedAt timestamp
+    await filter_cat.update({ deletedAt: new Date() });
+    res.json({ message: `FilterCategory ${filtercatId} soft-deleted successfully` });
+  } 
+  catch (error) 
+  {
+    console.error(`Error soft-deleting user ${userId}:`, error);
+    res.status(500).json({ error: `Failed to soft-delete user ${userId}` });
+  }
 });
 
 
@@ -308,7 +398,11 @@ app.post('/api/add_filters_category', async (req, res) => {
 app.get('/api/get_filters_category', async (req, res) => { 
   try 
   {
-    const categories = await FilterCategory.findAll();
+    const categories = await FilterCategory.findAll({
+      where: {
+        deletedAt: null // Filter out soft-deleted users
+      }
+    });
     res.json(categories);
   } 
   catch (error) 
@@ -318,13 +412,13 @@ app.get('/api/get_filters_category', async (req, res) => {
 });
 
 app.post('/api/add_filters_data', upload.single('image'), async (req, res) => {
-  const { category_id, sub_category } = req.body;
+  const { category_id, sub_category, api_key } = req.body;
   const file = req.file;
   const image = file.path;
   console.log(req,"Filter Api");
   try 
   {
-    const add_filters_data = await Filter.create({ category_id, sub_category,image });
+    const add_filters_data = await Filter.create({ category_id, sub_category,api_key,image });
     return res.status(200).send({ message: 'Filter Data.', filters: add_filters_data });
     
   } 

@@ -21,17 +21,26 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
-        model: 'FilterCategory',
+        model: 'FilterCategory', 
         key: 'id'
       }
     },
     image: {
-      type: DataTypes.STRING,
+      type: DataTypes.STRING, 
       allowNull: false
     },
     sub_category: {
-      type: DataTypes.STRING,
+      type: DataTypes.STRING, 
       allowNull: false
+    },
+    api_key: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    deletedAt: {
+      type: DataTypes.DATE,
+      allowNull: true, // Allow NULL for active users
+      defaultValue: null
     },
   }, {
     sequelize,
