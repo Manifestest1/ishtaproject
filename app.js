@@ -1,6 +1,8 @@
 const express = require('express');
 const cors = require('cors');
 const app = express();
+const { razorpay, crypto } = require('./razorpayConfig');
+require('dotenv').config();
 
 const bodyParser = require('body-parser');
 const bcrypt = require('bcryptjs');
@@ -164,7 +166,7 @@ app.get('/api/get_filters_data', async (req, res) => {
   
     // Fetch matched data from the Filter model with the corresponding FilterCategory
     const filters = await Filter.findAll({
-      attributes: ['id', 'image', 'sub_category','api_key', 'category_id'], // Include all necessary attributes of Filter
+      attributes: ['id', 'image', 'filter','api_key', 'category_id'], // Include all necessary attributes of Filter
       include: {
         model: FilterCategory,
         attributes: ['id', 'name', 'order_no'] // Include specific attributes of FilterCategory
@@ -188,7 +190,7 @@ app.get('/api/get_filters_data', async (req, res) => {
       acc[categoryId].sub_categories.push({
         id: filter.id,
         image: filter.image,
-        sub_category: filter.sub_category,
+        filter: filter.filter,
         api_key: filter.api_key
       });
       return acc;
@@ -295,7 +297,49 @@ app.put('/api/filter-category/:id/delete', async (req, res) => {
   }
 });
 
+// Start RazorPay Api
+app.post("/api/create-order", async (req, res) => {
 
+  try {
+
+      if(!req.body)
+      {
+          return res.status(400).send("Bad Request");
+      }
+      const options = req.body;
+      const order = await razorpay.orders.create(options);
+
+      if(!order)
+      {
+        return res.status(400).send("Bad Request");
+      }
+
+      res.json(order);
+      
+  } catch (error) {
+      console.log(error);
+      res.status(500).send(error);
+  }
+})
+
+app.post("/api/order-validate", async (req, res) => {
+
+  const {razorpay_order_id, razorpay_payment_id, razorpay_signature} = req.body
+
+  const sha = crypto.createHmac("sha256", process.env.RAZORPAY_SECRET_ID);
+  // order_id + " | " + razorpay_payment_id
+
+  sha.update(`${razorpay_order_id}|${razorpay_payment_id}`);
+
+  const digest = sha.digest("hex");
+
+  if (digest!== razorpay_signature) {
+      return res.status(400).json({msg: " Transaction is not legit!"});
+  }
+
+  res.json({msg: " Transaction is legit!", orderId: razorpay_order_id,paymentId: razorpay_payment_id});
+})
+// End RazorPay Api
 
 //   Start Admin Api
 
@@ -380,7 +424,7 @@ app.post('/api/user_status_update', async (req, res) => {
 
 });
 
-app.post('/api/add_filters_category', async (req, res) => {
+app.post('/api/add_filters_category', async (req, res) => { 
   const { name, order_no } = req.body;
   try 
   {
@@ -412,13 +456,13 @@ app.get('/api/get_filters_category', async (req, res) => {
 });
 
 app.post('/api/add_filters_data', upload.single('image'), async (req, res) => {
-  const { category_id, sub_category, api_key } = req.body;
+  const { category_id, filter, api_key } = req.body;
   const file = req.file;
   const image = file.path;
   console.log(req,"Filter Api");
   try 
   {
-    const add_filters_data = await Filter.create({ category_id, sub_category,api_key,image });
+    const add_filters_data = await Filter.create({ category_id, filter,api_key,image });
     return res.status(200).send({ message: 'Filter Data.', filters: add_filters_data });
     
   } 

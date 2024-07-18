@@ -15,10 +15,10 @@ module.exports = {
       image: {
         type: Sequelize.STRING
       },
-      sub_category: {
+      filter: {
         type: Sequelize.STRING
       },
-      deletedAt: {
+      deletedAt: { 
         allowNull: true,
         type: Sequelize.DATE
       },

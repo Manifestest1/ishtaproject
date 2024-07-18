@@ -9,7 +9,7 @@ module.exports = {
       after: 'password'
     });
 
-    await queryInterface.addColumn('users', 'deletedAt', {
+    await queryInterface.addColumn('users', 'deletedAt', { 
       type: Sequelize.DATE,
       allowNull: true,
       defaultValue: null,

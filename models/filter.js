@@ -20,7 +20,7 @@ module.exports = (sequelize, DataTypes) => {
     category_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
-      references: {
+      references: { 
         model: 'FilterCategory', 
         key: 'id'
       }
@@ -29,7 +29,7 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING, 
       allowNull: false
     },
-    sub_category: {
+    filter: {
       type: DataTypes.STRING, 
       allowNull: false
     },
