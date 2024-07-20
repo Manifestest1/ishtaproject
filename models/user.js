@@ -11,8 +11,8 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: false,
     },
-    email: { 
-      type: DataTypes.STRING,
+    email: {  
+      type: DataTypes.STRING, 
       allowNull: false,
       unique: true,
       validate: {
@@ -22,11 +22,16 @@ module.exports = (sequelize, DataTypes) => {
     password: {
       type: DataTypes.STRING,
       allowNull: false,
-    },
+    }, 
     is_active: {
       type: DataTypes.BOOLEAN,
       allowNull: false,
       defaultValue: true,
+    },
+    credit_balance: { 
+      type: DataTypes.STRING,
+      allowNull: true,
+      defaultValue: null,
     },
     deletedAt: {
       type: DataTypes.DATE,

@@ -12,6 +12,8 @@ const { Admin } = require('./models');
 const { FilterCategory } = require('./models'); 
 const { Filter } = require('./models');
 const { Image } = require('./models');
+const { Plan } = require('./models');
+const {ImageCredit} = require('./models');
 
 const SECRET_KEY = 'your_jwt_secret_key'; 
 let blacklist = [];
@@ -145,6 +147,19 @@ app.post('/api/login', async (req, res) => {
     try 
     {
       const add_images_data = await Image.create({ user_id,image });
+
+      // Start Credit Balance Logic
+
+      const user = await User.findByPk(user_id);
+      const imagecredit = await ImageCredit.findOne();
+      const user_credit_balance = user.credit_balance - imagecredit.image_credit;
+
+      const updated_user_credit = await User.update({ credit_balance:  user_credit_balance}, {
+        where: { id: user_id }
+      });
+
+      // End Credit Balance Logic
+
       return res.status(200).send({ message: 'Filter Data.', images: add_images_data });
       
     } 
@@ -490,6 +505,123 @@ app.put('/api/user/:id/delete', async (req, res) => {
   {
     console.error(`Error soft-deleting user ${userId}:`, error);
     res.status(500).json({ error: `Failed to soft-delete user ${userId}` });
+  }
+});
+
+// credit api
+
+app.post('/api/add_credit_data', async (req, res) => { 
+  const { label, value, credit } = req.body;
+  try 
+  {
+    const add_credit_data = await Plan.create({ label, value, credit });
+    return res.status(200).send({ message: 'Credit Data.', add_credit_data: add_credit_data });
+    
+  } 
+  catch (error) 
+  {
+    res.status(500).json({ error: 'Login failed' });
+  }
+});
+
+app.get('/api/get_credits_data', authMiddleware, async (req, res) => {
+  try 
+  {
+    // const users = await User.findAll();
+    const credit_data = await Plan.findAll({
+      where: {
+        deletedAt: null // Filter out soft-deleted users
+      }
+    });
+    res.json(credit_data);
+  } 
+  catch (error) 
+  {
+    res.status(500).json({ error: 'Failed to fetch users' });
+  }
+});
+
+app.put('/api/credit-data/:id/edit', async (req, res) => {
+  const creditId = req.params.id;
+  try 
+  {
+    const credit_data = await Plan.findByPk(creditId);
+    if (!credit_data) 
+    {
+      return res.status(404).json({ error: 'Filter Category not found' }); 
+    }
+    res.json({ message: `Edit Data get successfully`,credit_edit_data:  credit_data});
+  } 
+  catch (error) 
+  {
+    console.error(`Error soft-deleting user ${creditId}:`, error);
+    res.status(500).json({ error: `Failed to soft-delete user ${creditId}` });
+  }
+});
+
+app.post('/api/credit_data_update', async (req, res) => {
+  console.log(req,"FRom user update")
+  const {label,value,credit,credit_id } = req.body;
+
+  try 
+  {
+    // Update user's isActive status
+    const updatedFilterCat = await Plan.update({ label: label,value: value,credit:credit }, {
+      where: { id: credit_id }
+    });
+    res.json({ message: 'Filter Category updated successfully' ,update_filter_cat: updatedFilterCat[0]});
+  
+  } 
+  catch (error) 
+  {
+    console.error('Error updating user status:', error);
+    res.status(500).json({ error: 'Failed to update user status' });
+  }
+
+});
+
+app.put('/api/credit-data/:id/delete', async (req, res) => {
+  const creditId = req.params.id;
+  try 
+  {
+    const credit_data = await Plan.findByPk(creditId);
+    if (!credit_data) 
+    {
+      return res.status(404).json({ error: 'Filter Category not found' }); 
+    }
+    // Soft delete user by setting deletedAt timestamp
+    await credit_data.update({ deletedAt: new Date() });
+    res.json({ message: `Plan ${creditId} soft-deleted successfully` });
+  } 
+  catch (error) 
+  {
+    console.error(`Error soft-deleting user ${creditId}:`, error);
+    res.status(500).json({ error: `Failed to soft-delete user ${creditId}` });
+  }
+});
+
+app.post('/api/set_credit_image', async (req, res) => {
+  const { image_credit } = req.body;
+  try {
+    let set_credit_data;
+
+    // Check if there is already existing data
+    const existingCreditData = await ImageCredit.findOne();
+
+    if (existingCreditData) {
+      // Update the existing entry
+      existingCreditData.image_credit = image_credit;
+      set_credit_data = await existingCreditData.save();
+    } else {
+      // Create a new entry
+      set_credit_data = await ImageCredit.create({ image_credit });
+    }
+
+    return res.status(200).send({ message: 'Credit Data.', set_credit_data });
+    
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error occurred.' });
   }
 });
 
