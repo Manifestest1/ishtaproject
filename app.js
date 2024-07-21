@@ -148,18 +148,6 @@ app.post('/api/login', async (req, res) => {
     {
       const add_images_data = await Image.create({ user_id,image });
 
-      // Start Credit Balance Logic
-
-      const user = await User.findByPk(user_id);
-      const imagecredit = await ImageCredit.findOne();
-      const user_credit_balance = user.credit_balance - imagecredit.image_credit;
-
-      const updated_user_credit = await User.update({ credit_balance:  user_credit_balance}, {
-        where: { id: user_id }
-      });
-
-      // End Credit Balance Logic
-
       return res.status(200).send({ message: 'Filter Data.', images: add_images_data });
       
     } 
@@ -509,6 +497,29 @@ app.put('/api/user/:id/delete', async (req, res) => {
 });
 
 // credit api
+
+app.post('/api/user_credit_balance_deduct', authMiddleware, async (req, res) => {
+  const { batchsize } = req.body;
+  try 
+  {
+     // Start User Credit Balance Logic
+
+     const user = await User.findByPk(req.userId);
+     const imagecredit = await ImageCredit.findOne();
+     const user_credit_balance = user.credit_balance - (imagecredit.image_credit * batchsize);
+
+     const updated_user_credit = await User.update({ credit_balance:  user_credit_balance}, { 
+       where: { id: req.userId }
+     });
+
+     // End Credit Balance Logic
+    res.json({ updated_user_credit });
+  } 
+  catch (error) 
+  {
+    res.status(500).json({ error: 'Failed to fetch profile' });
+  }
+});
 
 app.post('/api/add_credit_data', async (req, res) => { 
   const { label, value, credit } = req.body;
