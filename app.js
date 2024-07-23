@@ -14,6 +14,8 @@ const { Filter } = require('./models');
 const { Image } = require('./models');
 const { Plan } = require('./models');
 const {ImageCredit} = require('./models');
+const {UserPayment} = require('./models');
+const {Order} = require('./models');
 
 const SECRET_KEY = 'your_jwt_secret_key'; 
 let blacklist = [];
@@ -342,6 +344,51 @@ app.post("/api/order-validate", async (req, res) => {
 
   res.json({msg: " Transaction is legit!", orderId: razorpay_order_id,paymentId: razorpay_payment_id});
 })
+
+app.post('/api/add_payment_detail', authMiddleware, async (req, res) => {
+  const user_id = req.userId;
+  const { order_payment_id, payment_id, payment, credit } = req.body;
+  
+  try {
+    // Parse credit amount from request body
+    const parsedCredit = parseInt(credit);
+
+    // Find user by user_id
+    const user = await User.findByPk(user_id);
+
+    // Calculate new credit balance
+    const user_credit_balance = parseInt(user.credit_balance) + parsedCredit;
+
+    // Update user's credit balance in the database
+    await User.update(
+      { credit_balance: user_credit_balance },
+      { where: { id: user_id } }
+    );
+
+    // Fetch updated user data after update
+    const updatedUser = await User.findByPk(user_id);
+
+    // Create payment detail record
+    const add_payment_detail = await UserPayment.create({ 
+      user_id, 
+      order_payment_id, 
+      payment_id,
+      payment, 
+      credit 
+    });
+
+    // Return response with updated credit balance and payment detail
+    return res.status(200).send({ 
+      message: 'Payment Detail Data.',
+      user_credit_balance: updatedUser,
+      add_payment_detail
+    });
+  } catch (error) {
+    console.error('Error:', error);
+    return res.status(500).json({ error: 'An error occurred while processing the request.' });
+  }
+});
+
 // End RazorPay Api
 
 //   Start Admin Api
@@ -633,6 +680,25 @@ app.post('/api/set_credit_image', async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Error occurred.' });
+  }
+});
+
+// Order Api
+
+app.get('/api/get_orders_data', authMiddleware, async (req, res) => {
+  try 
+  {
+    // const users = await User.findAll();
+    const orders_data = await Order.findAll({
+      where: {
+        deletedAt: null // Filter out soft-deleted users
+      }
+    });
+    res.json(orders_data);
+  } 
+  catch (error) 
+  {
+    res.status(500).json({ error: 'Failed to fetch users' });
   }
 });
 
